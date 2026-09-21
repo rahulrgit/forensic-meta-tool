@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forensic Meta Tool — Digital Image Analyzer</title>
+<style>
+:root{--bg:#080b12;--card:#111722;--card2:#0d131d;--line:#243044;--text:#e8edf5;--muted:#91a0b6;--accent:#58a6ff;--good:#35d07f;--warn:#f0b429;--bad:#ff6b6b}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 20% 0,#14213a 0,#080b12 38%);color:var(--text);font:14px/1.5 Inter,Segoe UI,Arial,sans-serif}
+.wrap{max-width:1250px;margin:auto;padding:28px 18px 50px}.hero{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:24px}
+h1{margin:0;font-size:31px;letter-spacing:-.7px}.sub{color:var(--muted);margin:6px 0 0}.badge{border:1px solid #2b405e;background:#0d1a2b;color:#8ec5ff;padding:7px 11px;border-radius:999px;font-size:12px;white-space:nowrap}
+.drop{border:1.5px dashed #385273;background:rgba(17,23,34,.86);border-radius:18px;padding:42px 20px;text-align:center;transition:.2s}.drop.over{border-color:var(--accent);background:#101d30}
+.drop h2{margin:0 0 6px}.drop p{color:var(--muted);margin:0 0 18px}.btn{border:1px solid #31547d;background:#173052;color:#dcecff;padding:10px 15px;border-radius:9px;cursor:pointer;font-weight:600}.btn:hover{background:#1c3d63}.btn.secondary{background:#141b27;border-color:var(--line)}.btn.danger{border-color:#713b45;background:#321821}
+input[type=file]{display:none}.notice{margin-top:12px;color:#8fa3bc;font-size:12px;text-align:center}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 12px}.tab{padding:9px 13px;border:1px solid var(--line);background:#0d131d;color:#9eabc0;border-radius:8px;cursor:pointer}.tab.active{background:#173052;color:#fff;border-color:#35679c}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:14px;padding:16px}.metric{font-size:21px;font-weight:700;margin-top:5px;word-break:break-word}.label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
+.panel{margin-top:12px}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:10px 8px;border-bottom:1px solid #202b3b;text-align:left;vertical-align:top}.table th{color:#8fa1ba;font-size:12px}.table td:first-child{color:#aebbd0;width:32%}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;word-break:break-all}
+.status{padding:3px 8px;border-radius:999px;font-size:11px;border:1px solid}.ok{color:#72e6a5;border-color:#286746;background:#10241a}.warn{color:#ffd36a;border-color:#725a20;background:#2a2110}.bad{color:#ff8c8c;border-color:#713a40;background:#2a1518}
+.hidden{display:none}.empty{text-align:center;padding:35px;color:var(--muted)}.files{margin-top:18px}.fileRow{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;background:#0e141e;border:1px solid var(--line);border-radius:9px;margin-bottom:7px}.small{font-size:12px;color:var(--muted)}
+footer{margin-top:35px;color:#687891;text-align:center;font-size:12px}
+@media(max-width:850px){.grid{grid-template-columns:repeat(2,1fr)}.hero{display:block}.badge{display:inline-block;margin-top:12px}}
+@media(max-width:520px){.grid{grid-template-columns:1fr}.wrap{padding:20px 12px}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div><h1>🕵️ Forensic Meta Tool</h1><div class="sub">Digital image metadata & forensic evidence analyzer</div></div>
+    <div class="badge">🔒 Client-side processing</div>
+  </div>
+
+  <div id="drop" class="drop">
+    <h2>Analyze an image</h2>
+    <p>Drag & drop one or multiple images here. Your files stay in this browser.</p>
+    <label class="btn">Choose Images<input id="picker" type="file" accept="image/*" multiple></label>
+  </div>
+  <div class="notice">EXIF/XMP/IPTC parsing uses the browser library Exifr. Results are indicators, not proof of image tampering.</div>
+
+  <div id="app" class="hidden">
+    <div class="toolbar">
+      <button class="btn" id="jsonBtn">↓ Export JSON</button>
+      <button class="btn" id="csvBtn">↓ Export CSV</button>
+      <button class="btn" id="printBtn">🖨 Print / Save PDF</button>
+      <button class="btn secondary" id="copyBtn">Copy Summary</button>
+      <button class="btn danger" id="clearBtn">Clear</button>
+    </div>
+    <div id="fileList" class="files"></div>
+    <div id="results"></div>
+  </div>
+
+  <footer>Forensic Meta Tool • MIT License • Built for defensive digital-forensics learning</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/spark-md5@3.0.2/spark-md5.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let reports=[], active=0;
+
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function human(n){if(n<1024)return n+" B";let u=["KB","MB","GB"],i=-1;do{n/=1024;i++}while(n>=1024&&i<u.length-1);return n.toFixed(n<10?1:0)+" "+u[i]}
+function fmt(v){if(v===undefined||v===null||v==="")return "—";if(typeof v==="object"){try{return JSON.stringify(v)}catch{return String(v)}}return String(v)}
+function csvCell(v){return '"'+String(v??"").replaceAll('"','""')+'"'}
+
+async function digestHex(file,alg){
+  const buf=await file.arrayBuffer(); const d=await crypto.subtle.digest(alg,buf);
+  return [...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,"0")).join("");
+}
+async function md5(file){
+  const ab=await file.arrayBuffer(); return SparkMD5.ArrayBuffer.hash(ab);
+}
+function signature(buf){
+  const b=new Uint8Array(buf).slice(0,12);
+  if(b[0]===0xFF&&b[1]===0xD8&&b[2]===0xFF)return "JPEG";
+  if(b[0]===0x89&&b[1]===0x50&&b[2]===0x4E&&b[3]===0x47)return "PNG";
+  if(b[0]===0x52&&b[1]===0x49&&b[2]===0x46&&b[3]===0x46&&b[8]===0x57&&b[9]===0x45&&b[10]===0x42&&b[11]===0x50)return "WEBP";
+  if(b[0]===0x47&&b[1]===0x49&&b[2]===0x46)return "GIF";
+  return "Unknown";
+}
+function mapLinks(lat,lon){
+  if(lat==null||lon==null)return "";
+  return `<a class="btn" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}">OpenStreetMap</a>
+  <a class="btn secondary" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${lat},${lon}">Google Maps</a>`;
+}
+function findTag(o, keys){for(const k of keys)if(o?.[k]!=null)return o[k];return null}
+function gpsText(o){
+  const lat=findTag(o,["latitude","GPSLatitude"]), lon=findTag(o,["longitude","GPSLongitude"]);
+  return lat!=null&&lon!=null?`${lat}, ${lon}`:"Not available";
+}
+function section(title, rows){
+  return `<div class="card panel"><h3 style="margin-top:0">${title}</h3><table class="table">${rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${r[2]||esc(fmt(r[1]))}</td></tr>`).join("")}</table></div>`;
+}
+function badge(text,kind="ok"){return `<span class="status ${kind}">${esc(text)}</span>`}
+
+async function analyze(file){
+  const buf=await file.arrayBuffer(), sig=signature(buf), mime=file.type||"unknown";
+  let meta={}; try{meta=await exifr.parse(file,{tiff:true,xmp:true,iptc:true,icc:true,ifd0:true,exif:true,gps:true,interoperability:true,translateValues:true})||{}}catch(e){meta={_parseError:e.message}}
+  let hash256="",sha1="",m5="";
+  try{hash256=await digestHex(file,"SHA-256")}catch{}
+  try{sha1=await digestHex(file,"SHA-1")}catch{}
+  try{m5=await md5(file)}catch{}
+  const url=URL.createObjectURL(file); let dims={w:"—",h:"—"};
+  try{const im=await new Promise((res,rej)=>{const x=new Image();x.onload=()=>res(x);x.onerror=rej;x.src=url});dims={w:im.naturalWidth,h:im.naturalHeight};}catch{}
+  URL.revokeObjectURL(url);
+  const lat=findTag(meta,["latitude","GPSLatitude"]), lon=findTag(meta,["longitude","GPSLongitude"]);
+  const software=findTag(meta,["Software","software","CreatorTool"]);
+  const dt=findTag(meta,["DateTimeOriginal","CreateDate","DateTimeDigitized","ModifyDate","DateTime"]);
+  const make=findTag(meta,["Make","make"]), model=findTag(meta,["Model","model"]), lens=findTag(meta,["LensModel","Lens","lensModel"]);
+  const tags=Object.keys(meta).filter(k=>!k.startsWith("_"));
+  const observations=[];
+  if(sig!=="Unknown" && !mime.includes(sig.toLowerCase())) observations.push(["warn","File signature and MIME/extension should be reviewed."]);
+  if(lat!=null&&lon!=null) observations.push(["ok","GPS metadata is present."]);
+  else observations.push(["warn","No GPS coordinates were found in parsed metadata."]);
+  if(software) observations.push(["warn","Software/creator metadata is present; this indicates the file may have been processed, but does not by itself prove manipulation."]);
+  if(!dt) observations.push(["warn","No common capture timestamp was found."]);
+  if(tags.length===0) observations.push(["warn","No supported metadata fields were found."]);
+  return {name:file.name,size:file.size,type:mime,lastModified:file.lastModified,sig,dims,hash256,sha1,md5:m5,meta,lat,lon,software,dt,make,model,lens,tagCount:tags.length,observations};
+}
+
+function render(){
+  $("app").classList.remove("hidden");
+  $("fileList").innerHTML=reports.map((r,i)=>`<div class="fileRow"><div><b>${esc(r.name)}</b><div class="small">${human(r.size)} • ${esc(r.type)} • ${r.dims.w}×${r.dims.h}</div></div><button class="btn secondary" onclick="showReport(${i})">View</button></div>`).join("");
+  showReport(active);
+}
+function showReport(i){
+  active=i; const r=reports[i], m=r.meta||{}, gps=gpsText(m);
+  const obs=r.observations.map(x=>`<div style="margin:7px 0">${badge(x[0]==="ok"?"OK":"Review",x[0])} ${esc(x[1])}</div>`).join("");
+  $("results").innerHTML=`
+  <div class="grid">
+    <div class="card"><div class="label">File</div><div class="metric">${esc(r.name)}</div></div>
+    <div class="card"><div class="label">SHA-256</div><div class="metric mono">${r.hash256||"—"}</div></div>
+    <div class="card"><div class="label">Metadata fields</div><div class="metric">${r.tagCount}</div></div>
+    <div class="card"><div class="label">GPS</div><div class="metric">${r.lat!=null&&r.lon!=null?badge("Available","ok"):badge("Not found","warn")}</div></div>
+  </div>
+  ${section("Overview",[
+    ["File name",r.name],["File size",human(r.size)],["MIME type",r.type],["Detected signature",r.sig],
+    ["Dimensions",`${r.dims.w} × ${r.dims.h}`],["Last modified (browser file)",new Date(r.lastModified).toLocaleString()],
+    ["Metadata fields",r.tagCount]
+  ])}
+  ${section("Camera & capture",[
+    ["Make",r.make],["Model",r.model],["Lens",r.lens],["Capture/metadata date",r.dt],["Software",r.software]
+  ])}
+  ${section("GPS / Location",[
+    ["Coordinates",gps],["Map",r.lat!=null&&r.lon!=null?mapLinks(r.lat,r.lon):"—"]
+  ])}
+  ${section("Cryptographic hashes",[
+    ["SHA-256",`<span class="mono">${esc(r.hash256)}</span>`],["SHA-1",`<span class="mono">${esc(r.sha1)}</span>`],["MD5",`<span class="mono">${esc(r.md5)}</span>`]
+  ])}
+  ${section("Forensic observations",[[ "Observations",obs ]])}
+  ${section("Parsed metadata",Object.entries(m).map(([k,v])=>[k,fmt(v)]))}
+  `;
+}
+async function processFiles(files){
+  $("drop").querySelector("h2").textContent="Analyzing…";
+  const arr=[...files].filter(f=>f.type.startsWith("image/")||/\.(jpg|jpeg|png|webp|gif|tif|tiff|heic|heif)$/i.test(f.name));
+  for(const f of arr){try{reports.push(await analyze(f))}catch(e){reports.push({name:f.name,size:f.size,type:f.type,dims:{w:"—",h:"—"},tagCount:0,meta:{error:e.message},observations:[["bad","Analysis failed: "+e.message]]})}}
+  active=Math.max(0,reports.length-1); $("drop").querySelector("h2").textContent="Analyze another image"; render();
+}
+$("picker").addEventListener("change",e=>processFiles(e.target.files));
+["dragenter","dragover"].forEach(ev=>$("drop").addEventListener(ev,e=>{e.preventDefault();$("drop").classList.add("over")}));
+["dragleave","drop"].forEach(ev=>$("drop").addEventListener(ev,e=>{e.preventDefault();$("drop").classList.remove("over")}));
+$("drop").addEventListener("drop",e=>processFiles(e.dataTransfer.files));
+$("clearBtn").onclick=()=>{reports=[];$("app").classList.add("hidden");$("results").innerHTML="";$("fileList").innerHTML=""};
+$("printBtn").onclick=()=>window.print();
+$("copyBtn").onclick=async()=>{const r=reports[active];if(!r)return;await navigator.clipboard.writeText(`Forensic Meta Tool\nFile: ${r.name}\nSHA-256: ${r.hash256}\nType: ${r.type}\nSignature: ${r.sig}\nDimensions: ${r.dims.w}x${r.dims.h}\nGPS: ${gpsText(r.meta)}\nCamera: ${r.make||"—"} ${r.model||""}\nDate: ${r.dt||"—"}\nSoftware: ${r.software||"—"}`);$("copyBtn").textContent="Copied ✓";setTimeout(()=>$("copyBtn").textContent="Copy Summary",1300)};
+$("jsonBtn").onclick=()=>{const blob=new Blob([JSON.stringify(reports,null,2)],{type:"application/json"});download(blob,"forensic-report.json")};
+$("csvBtn").onclick=()=>{const cols=["name","size","type","sig","width","height","sha256","sha1","md5","make","model","lens","date","software","latitude","longitude"];let out=cols.map(csvCell).join(",")+"\n";reports.forEach(r=>out+=cols.map(c=>csvCell(c==="width"?r.dims.w:c==="height"?r.dims.h:c==="sha256"?r.hash256:c==="sha1"?r.sha1:c==="md5"?r.md5:c==="make"?r.make:c==="model"?r.model:c==="lens"?r.lens:c==="date"?r.dt:c==="software"?r.software:c==="latitude"?r.lat:c==="longitude"?r.lon:r[c])).join(",")+"\n");download(new Blob([out],{type:"text/csv"}),"forensic-report.csv")};
+function download(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+</script>
+</body>
+</html>

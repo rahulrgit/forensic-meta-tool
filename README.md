@@ -1,84 +1,38 @@
-# 🧠 Metadata Analyzer
+# 🕵️ Forensic Meta Tool
 
-A simple Python-based tool to extract **EXIF metadata** (like GPS location, camera model, date, time, etc.) from image files. Helpful in **digital forensics**, photography, and data analysis.
+A privacy-focused browser-based digital image metadata and forensic evidence analyzer.
 
----
+## Live on GitHub Pages
 
-## 🚀 Features
+After pushing `index.html` to the repository:
 
-- 📷 Extract metadata from JPEG images
-- 📍 Get GPS coordinates if available
-- 🕒 See original creation timestamp
-- ❌ Detect unsupported files like PNG
-- 🖥️ Easy-to-use CLI interface
+**Settings → Pages → Deploy from a branch → `main` → `/ (root)` → Save**
 
----
+The site will be available at:
 
-## 📦 Tech Stack
+`https://rahulrgit.github.io/forensic-meta-tool/`
 
-- Python 3.x
-- [ExifRead](https://pypi.org/project/ExifRead/) – to read EXIF metadata
-- [Pillow](https://pillow.readthedocs.io/en/stable/) – optional image handling
-- OS module for path & file handling
+## Features
 
----
+- EXIF / XMP / IPTC metadata parsing
+- GPS coordinates and map links
+- Camera, lens, software and timestamps
+- Image dimensions, MIME type and file signature
+- SHA-256, SHA-1 and MD5 hashes
+- Batch image analysis
+- JSON and CSV export
+- Print / Save as PDF
+- Metadata consistency observations
+- Client-side processing for privacy
 
-## 📁 Project Structure
+> The tool reports forensic indicators. Metadata inconsistencies alone do not prove that an image was manipulated.
 
-```
-metadata_analyzer/
-├── analyzer.py           # Main script
-├── sample/               # Place sample images here
-└── README.md
-```
+## Privacy
 
----
+Images are processed in the browser. The application does not upload the selected image to a backend server.
 
-## 📥 Installation
+The application loads Exifr and SparkMD5 from jsDelivr CDN.
 
-```bash
-pip install exifread pillow
-```
+## License
 
----
-
-## 🔧 Usage
-
-```bash
-python3 analyzer.py
-```
-
-📂 Enter the **full path** of your `.jpg` file (example):
-
-```
-/home/user/metadata_analyzer/sample/photo.jpg
-```
-
----
-
-## 📌 Notes
-
-- Only **.jpg / .jpeg** files contain detailed EXIF metadata
-- **.png / .webp / .bmp** do not support EXIF
-- Many social media platforms **strip metadata** before upload
-
----
-
-## 📈 Future Enhancements
-
-- [ ] Batch process all images in a folder
-- [ ] Export metadata to CSV
-- [ ] Add GUI using Tkinter
-
----
-
-## 👨‍💻 Author
-
-**Rahul Rathod**  
-🔗 GitHub: [@rahulrgit](https://github.com/rahulrgit)
-
----
-
-## 🪪 License
-
-MIT License. Feel free to use, modify, and share.
+MIT
