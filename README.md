@@ -1,37 +1,46 @@
-# 🕵️ Forensic Meta Tool
+# Forensic Meta Tool Pro
 
-A privacy-focused browser-based digital image metadata and forensic evidence analyzer.
-
-## Live on GitHub Pages
-
-After pushing `index.html` to the repository:
-
-**Settings → Pages → Deploy from a branch → `main` → `/ (root)` → Save**
-
-The site will be available at:
-
-`https://rahulrgit.github.io/forensic-meta-tool/`
+A privacy-focused, browser-based digital image metadata and forensic evidence indicator toolkit.
 
 ## Features
 
 - EXIF / XMP / IPTC metadata parsing
-- GPS coordinates and map links
-- Camera, lens, software and timestamps
-- Image dimensions, MIME type and file signature
-- SHA-256, SHA-1 and MD5 hashes
+- Camera, lens, software and timestamp fields
+- GPS extraction with OpenStreetMap and Google Maps links
+- SHA-256, SHA-1 and MD5 evidence hashes
+- File signature / MIME consistency check
+- Image dimensions and file information
 - Batch image analysis
-- JSON and CSV export
-- Print / Save as PDF
-- Metadata consistency observations
-- Client-side processing for privacy
+- Evidence Case ID, examiner and notes
+- Forensic indicator checks
+- Timestamp timeline
+- JSON and CSV case export
+- Printable report / Save as PDF
+- Copy investigation summary
+- Responsive dark forensic dashboard
+- Client-side image processing; no application backend upload
 
-> The tool reports forensic indicators. Metadata inconsistencies alone do not prove that an image was manipulated.
+## GitHub Pages
 
-## Privacy
+Upload `index.html` to the repository root.
 
-Images are processed in the browser. The application does not upload the selected image to a backend server.
+Then:
 
-The application loads Exifr and SparkMD5 from jsDelivr CDN.
+Settings → Pages → Deploy from a branch → `main` → `/ (root)` → Save
+
+Live URL:
+
+https://rahulrgit.github.io/forensic-meta-tool/
+
+## Important forensic limitation
+
+This tool reports technical metadata and consistency indicators. It does **not** determine authenticity or prove that an image was manipulated. Metadata can be removed, rewritten, or legitimately changed during editing/export/copying.
+
+## Dependencies
+
+- Exifr via jsDelivr CDN
+- SparkMD5 via jsDelivr CDN
+- Web Crypto API for SHA-256/SHA-1
 
 ## License
 
